@@ -75,26 +75,27 @@ Check a config file without starting the server:
 
 ### Apply Manifests
 
+The demo overlay deploys the ExtProc workload and an
+echo Gateway for local testing:
+
 ```console
-kubectl apply -f deploy/namespace.yaml
-kubectl apply -f deploy/configmap.yaml
-kubectl apply -f deploy/deployment.yaml
-kubectl apply -f deploy/service.yaml
+kubectl apply -k deploy/overlays/demo/workload
 ```
 
 This creates:
 
 - A `praxis-extproc` namespace
 - A ConfigMap with the ExtProc filter configuration
-- A Deployment running the ExtProc server
-- A Service exposing gRPC (50051), health (50052),
+- A `payload-processing` Deployment running the ExtProc
+  server
+- A Service exposing gRPC (9004), health (50052),
   and metrics (9090)
 
 Verify the deployment:
 
 ```console
 kubectl -n praxis-extproc rollout status \
-    deployment/praxis-extproc
+    deployment/payload-processing
 ```
 
 ### Istio Integration
@@ -103,13 +104,16 @@ For Istio service meshes, an [EnvoyFilter] resource
 wires Envoy's ext_proc HTTP filter to the ExtProc
 server.
 
-Deploy the test resources:
+Deploy the demo test resources:
 
 ```console
-kubectl apply -f deploy/echo.yaml
-kubectl apply -f deploy/gateway.yaml
-kubectl apply -f deploy/httproute.yaml
-kubectl apply -f deploy/envoyfilter.yaml
+kubectl apply -k deploy/overlays/demo/test
+```
+
+Or apply the full demo overlay in one step:
+
+```console
+kubectl apply -k deploy/overlays/demo
 ```
 
 This configures:
@@ -123,6 +127,10 @@ This configures:
 The EnvoyFilter configures `BUFFERED` mode for both
 request and response bodies, enabling body-inspecting
 filters like `guardrails` and `json_body_field`.
+
+Production / MaaS consumers should use
+`deploy/overlays/odh` instead (dual IPP instances and
+Kuadrant-anchored EnvoyFilters).
 
 [EnvoyFilter]: https://istio.io/latest/docs/reference/config/networking/envoy-filter/
 

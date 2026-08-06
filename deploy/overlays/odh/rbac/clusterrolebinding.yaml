@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: payload-processing-reader
+subjects:
+  # Placeholder namespace; MaaS PostRender rewrites to the gateway namespace.
+  - kind: ServiceAccount
+    name: payload-processing
+    namespace: openshift-ingress
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: payload-processing-reader

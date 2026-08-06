@@ -1,0 +1,70 @@
+# NetworkPolicy for payload-processing pods in the gateway namespace.
+#
+# Required on OCP 4.22+ where openshift-ingress has a default deny-all
+# NetworkPolicy. Without this, payload-processing pods cannot receive
+# ext_proc traffic from the gateway or reach the Kubernetes API server.
+#
+# Security constraints:
+# - podSelector: covers payload-processing and payload-pre-processing pods
+# - ingress: gateway ext_proc traffic (port 9004), monitoring scrape (9005, 9090)
+# - egress: DNS + Kubernetes API server only
+#
+# namespaceSelector value is a placeholder; MaaS PostRender rewrites it to
+# the tenant GatewayNamespace (e.g. istio-system on Kind/xks).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: payload-processing
+  labels:
+    app.opendatahub.io/modelsasservice: "true"
+    app.kubernetes.io/part-of: maas
+    app.kubernetes.io/component: networking
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - payload-processing
+          - payload-pre-processing
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              gateway.istio.io/managed: istio.io-gateway-controller
+          namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-ingress
+      ports:
+        - protocol: TCP
+          port: 9004
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-monitoring
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-user-workload-monitoring
+      ports:
+        - protocol: TCP
+          port: 9005
+        - protocol: TCP
+          port: 9090
+  egress:
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 5353
+        - protocol: TCP
+          port: 5353
+    - ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443

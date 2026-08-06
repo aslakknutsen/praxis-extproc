@@ -57,14 +57,10 @@ examples/
   envoy.yaml           # Example Envoy configuration
   branch-chains.yaml   # Branch chain example
 deploy/
-  namespace.yaml       # Kubernetes namespace
-  configmap.yaml       # ConfigMap with ExtProc config
-  deployment.yaml      # Deployment manifest
-  service.yaml         # Service manifest
-  envoyfilter.yaml     # Istio EnvoyFilter for ExtProc
-  echo.yaml            # Echo backend for testing
-  gateway.yaml         # Istio Gateway for testing
-  httproute.yaml       # HTTPRoute for testing
+  base/                # Shared IPP workload (Deployment, Service, ConfigMap)
+  overlays/
+    demo/              # Kind / getting-started (workload + echo Gateway)
+    odh/               # MaaS IPP entrypoint (dual instance + Kuadrant EF)
 hack/
   kind-config.yaml     # KIND cluster configuration
   setup-kind.sh        # KIND cluster setup script
