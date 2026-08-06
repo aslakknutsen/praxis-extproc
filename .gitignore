@@ -22,3 +22,6 @@ target
 
 # Personal notes
 .docs/**
+
+# Downloaded tool binaries (make ensure-envoy)
+.tools/

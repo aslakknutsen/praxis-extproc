@@ -15,6 +15,7 @@ path = "src/bin/praxis_extproc.rs"
 
 [features]
 integration = []
+envoy = []
 
 [dependencies]
 async-trait = "0.1.89"
@@ -46,6 +47,7 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
 
 [dev-dependencies]
+envoy-harness = { path = "tests/envoy_harness" }
 reqwest = { version = "0.12.28", default-features = false, features = ["rustls-tls"] }
 tokio = { version = "1.52.2", features = ["macros", "rt-multi-thread", "test-util"] }
 

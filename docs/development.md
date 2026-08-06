@@ -52,6 +52,8 @@ tests/
   grpc_server.rs       # In-process gRPC server tests
   services.rs          # Health and metrics service tests
   integration.rs       # Kubernetes integration tests
+  envoy_e2e.rs         # Local Envoy e2e (feature `envoy`)
+  envoy_harness/       # Envoy spawn + recording backend harness
 examples/
   praxis-extproc.yaml  # Example ExtProc configuration
   envoy.yaml           # Example Envoy configuration
@@ -167,6 +169,43 @@ Run with verbose output:
 make test-integration V=1
 ```
 
+### Local Envoy e2e Tests
+
+Spawns a real Envoy process (`ENVOY_VERSION`, default
+`1.38.3`, matching Istio `1.30.x` proxy Envoy branch),
+an in-process Praxis ExtProc gRPC server, and a recording
+upstream backend. No Kubernetes required.
+
+Two config layers (do not confuse them):
+
+- **Praxis YAML** — filter chains for the Praxis server
+  (`EnvoyEnvBuilder::new`, `overwrite_praxis_config`).
+- **Envoy bootstrap** — Envoy static config template
+  (`EnvoyEnvBuilder::envoy_bootstrap`; default
+  `tests/envoy_harness/templates/envoy.base.yaml`).
+  Required placeholders: `{{LISTENER_PORT}}`,
+  `{{ADMIN_PORT}}`, `{{EXTPROC_PORT}}`,
+  `{{BACKEND_PORT}}`, `{{ACCESS_LOG_PATH}}`.
+
+```console
+make ensure-envoy   # download binary to .tools/
+make test-envoy     # PR-gate smoke (headers + backend capture)
+```
+
+Hot-reload acceptance (`config_file_change_hot_reloads`)
+asserts that rewriting the Praxis config file updates
+response headers without restart. It is `#[ignore]` until
+[issue #17](https://github.com/opendatahub-io/praxis-extproc/issues/17)
+and is expected to **fail** when run with other ignored Envoy e2e
+tests:
+
+```console
+make test-envoy-failing
+```
+
+When #17 lands, remove `#[ignore]` from that test; no
+assertion change is required.
+
 ## Container Build
 
 ```console
@@ -188,6 +227,7 @@ runs on every push and pull request:
 - Format check (`cargo +nightly fmt --check`)
 - Clippy (`cargo clippy -- -D warnings`)
 - Tests (`cargo test`)
+- Envoy e2e (`make ensure-envoy && make test-envoy`)
 - Doc build (`RUSTDOCFLAGS="-D warnings" cargo doc`)
 - Audit (`cargo audit`, `cargo deny check`)
 

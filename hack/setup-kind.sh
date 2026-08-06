@@ -10,6 +10,8 @@ EXTPROC_IMAGE="${EXTPROC_IMAGE:-praxis-extproc:dev}"
 SAIL_REPO="https://istio-ecosystem.github.io/sail-operator"
 GWAPI_VERSION="v1.5.1"
 METALLB_VERSION="v0.14.9"
+# Pin Istio to match local Envoy e2e (Envoy 1.38.x ≈ Istio 1.30.x proxy branch).
+ISTIO_VERSION="${ISTIO_VERSION:-1.30.2}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 KUBECTL="kubectl --context kind-${CLUSTER_NAME}"
@@ -106,18 +108,7 @@ install_sail_operator() {
 }
 
 create_istio_control_plane() {
-    local istio_version
-    istio_version="${ISTIO_VERSION:-}"
-
-    if [ -z "${istio_version}" ]; then
-        istio_version=$(helm list -n sail-operator \
-            --kube-context "kind-${CLUSTER_NAME}" -o json \
-            | grep -o '"app_version":"[^"]*"' \
-            | head -1 \
-            | sed 's/"app_version":"//;s/"//')
-        echo "==> Auto-detected Istio version: v${istio_version}"
-    fi
-
+    local istio_version="${ISTIO_VERSION}"
     echo "==> Creating Istio control plane (v${istio_version})..."
     ${KUBECTL} create namespace istio-system 2>/dev/null || true
 

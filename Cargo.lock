@@ -760,6 +760,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "envoy-harness"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "http",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "praxis-ai-filters",
+ "praxis-extproc",
+ "praxis-proxy-proto",
+ "reqwest 0.12.28",
+ "tempfile",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tracing",
+ "yaml_serde",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2107,6 +2128,7 @@ dependencies = [
  "async-trait",
  "bytes",
  "clap",
+ "envoy-harness",
  "http",
  "http-body-util",
  "hyper",

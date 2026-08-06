@@ -1,5 +1,6 @@
 .PHONY: all build release check clean \
-	test test-integration lint fmt doc audit \
+	test test-integration test-envoy test-envoy-failing ensure-envoy \
+	lint fmt doc audit \
 	coverage-check \
 	require-container-engine \
 	container container-release images kind-up kind-down smoke-test \
@@ -16,6 +17,23 @@ V                 ?=
 KIND_CLUSTER_NAME ?= praxis-extproc
 EXTPROC_IMAGE     ?= praxis-extproc:dev
 KUBECTL           ?= kubectl --context kind-$(KIND_CLUSTER_NAME)
+
+# Envoy 1.38.x matches Istio 1.30.x proxy Envoy branch (see hack/setup-kind.sh).
+ENVOY_VERSION     ?= 1.38.3
+ENVOY_BIN         ?= $(CURDIR)/.tools/envoy-$(ENVOY_VERSION)
+UNAME_M           := $(shell uname -m)
+ifeq ($(UNAME_M),x86_64)
+  ENVOY_ARCH := x86_64
+else ifeq ($(UNAME_M),amd64)
+  ENVOY_ARCH := x86_64
+else ifeq ($(UNAME_M),aarch64)
+  ENVOY_ARCH := aarch_64
+else ifeq ($(UNAME_M),arm64)
+  ENVOY_ARCH := aarch_64
+else
+  ENVOY_ARCH := $(UNAME_M)
+endif
+ENVOY_DOWNLOAD_URL ?= https://github.com/envoyproxy/envoy/releases/download/v$(ENVOY_VERSION)/envoy-$(ENVOY_VERSION)-linux-$(ENVOY_ARCH)
 
 ifneq ($(V),)
   _NOCAPTURE := -- --nocapture
@@ -53,6 +71,24 @@ test:
 test-integration:
 	cargo test --features integration -- --ignored $(if $(V),--nocapture,)
 
+ensure-envoy:
+	@mkdir -p $(dir $(ENVOY_BIN))
+	@if [ -x "$(ENVOY_BIN)" ]; then \
+		echo "envoy $(ENVOY_VERSION) already at $(ENVOY_BIN)"; \
+	else \
+		echo "Downloading Envoy $(ENVOY_VERSION) ($(ENVOY_ARCH))..."; \
+		curl -fL --retry 3 -o "$(ENVOY_BIN).tmp" "$(ENVOY_DOWNLOAD_URL)"; \
+		chmod +x "$(ENVOY_BIN).tmp"; \
+		mv "$(ENVOY_BIN).tmp" "$(ENVOY_BIN)"; \
+		"$(ENVOY_BIN)" --version; \
+	fi
+
+test-envoy: ensure-envoy
+	ENVOY_BIN=$(ENVOY_BIN) cargo test --features envoy $(if $(V),-- --nocapture,)
+
+# Runs #[ignore] Envoy e2e tests (may fail; not a PR gate).
+test-envoy-failing: ensure-envoy
+	ENVOY_BIN=$(ENVOY_BIN) cargo test --features envoy -- --ignored $(if $(V),--nocapture,)
 # ---------------------------------------------------------------------------
 # Quality
 # ---------------------------------------------------------------------------
@@ -166,6 +202,9 @@ help:
 	@echo "Test:"
 	@echo "  test             run all tests"
 	@echo "  test-integration run integration tests (ignored tests)"
+	@echo "  ensure-envoy     download pinned Envoy binary to .tools/"
+	@echo "  test-envoy       run local Envoy e2e tests (PR gate)"
+	@echo "  test-envoy-failing  run ignored Envoy e2e tests (may fail)"
 	@echo ""
 	@echo "Quality:"
 	@echo "  lint             clippy + rustfmt check"
