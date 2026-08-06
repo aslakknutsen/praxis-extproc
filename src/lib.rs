@@ -17,6 +17,8 @@ pub mod config;
 pub mod error;
 pub mod health;
 pub mod metrics;
+pub mod reload;
 pub mod response;
 pub mod server;
 pub mod tls;
+pub mod watcher;

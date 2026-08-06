@@ -57,7 +57,7 @@ pub struct ExtProcConfig {
 /// let cfg = ServerConfig::default();
 /// assert_eq!(cfg.grpc_address, "0.0.0.0:50051");
 /// ```
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct ServerConfig {
     /// gRPC listen address.
@@ -83,6 +83,30 @@ impl Default for ServerConfig {
             tls: crate::tls::TlsConfig::default(),
         }
     }
+}
+
+// -----------------------------------------------------------------------------
+// Config Loading
+// -----------------------------------------------------------------------------
+
+/// Read and parse an ExtProc YAML configuration file.
+///
+/// # Errors
+///
+/// Returns [`ExtProcError::Config`] when the file cannot be read or
+/// parsed.
+pub fn load_config(path: &str) -> Result<ExtProcConfig> {
+    let content = std::fs::read_to_string(path).map_err(|e| ExtProcError::Config(format!("{path}: {e}")))?;
+    parse_config(&content)
+}
+
+/// Parse ExtProc YAML from a string.
+///
+/// # Errors
+///
+/// Returns [`ExtProcError::Config`] when YAML is invalid.
+pub fn parse_config(yaml: &str) -> Result<ExtProcConfig> {
+    serde_yaml::from_str(yaml).map_err(|e| ExtProcError::Config(e.to_string()))
 }
 
 // -----------------------------------------------------------------------------

@@ -11,6 +11,7 @@
 
 use std::{collections::HashMap, mem, pin::Pin, sync::Arc, time::Instant};
 
+use arc_swap::ArcSwap;
 use bytes::Bytes;
 use praxis_filter::{FilterAction, FilterPipeline, HttpFilterContext, Request, Response};
 use praxis_proto::envoy::service::{
@@ -40,6 +41,13 @@ const RESPONSE_CHANNEL_SIZE: usize = 16;
 // Types
 // -----------------------------------------------------------------------------
 
+/// Process-wide filter pipeline slot. Reloads atomically swap the inner
+/// [`Arc`]; each ExtProc stream pins one generation via [`ArcSwap::load_full`].
+///
+/// [`Arc`]: std::sync::Arc
+/// [`ArcSwap::load_full`]: arc_swap::ArcSwapAny::load_full
+pub type PipelineSlot = Arc<ArcSwap<FilterPipeline>>;
+
 /// Output stream type for the `Process` RPC.
 type ProcessStream = Pin<Box<dyn tokio_stream::Stream<Item = Result<ProcessingResponse, Status>> + Send>>;
 
@@ -49,19 +57,29 @@ type ProcessStream = Pin<Box<dyn tokio_stream::Stream<Item = Result<ProcessingRe
 
 /// Praxis ExtProc gRPC service.
 ///
-/// Holds a shared [`FilterPipeline`] and executes it for each
-/// incoming gRPC stream.
+/// Holds a swappable [`FilterPipeline`] and pins one generation per
+/// incoming gRPC stream for the stream lifetime.
 ///
 /// [`FilterPipeline`]: praxis_filter::FilterPipeline
 pub struct PraxisExtProc {
-    /// Shared filter pipeline.
-    pipeline: Arc<FilterPipeline>,
+    /// Process-wide pipeline slot (atomic swap on reload).
+    pipelines: PipelineSlot,
 }
 
 impl PraxisExtProc {
-    /// Create a new ExtProc service backed by the given pipeline.
-    pub fn new(pipeline: Arc<FilterPipeline>) -> Self {
-        Self { pipeline }
+    /// Create a new ExtProc service backed by the given pipeline slot.
+    pub fn new(pipelines: PipelineSlot) -> Self {
+        Self { pipelines }
+    }
+
+    /// Create a service from a fixed pipeline (wraps it in a new slot).
+    pub fn from_pipeline(pipeline: Arc<FilterPipeline>) -> Self {
+        Self::new(Arc::new(ArcSwap::from(pipeline)))
+    }
+
+    /// Shared handle to the process-wide pipeline slot.
+    pub fn pipelines(&self) -> &PipelineSlot {
+        &self.pipelines
     }
 }
 
@@ -78,7 +96,8 @@ impl ExternalProcessor for PraxisExtProc {
         &self,
         request: TonicRequest<Streaming<ProcessingRequest>>,
     ) -> Result<TonicResponse<Self::ProcessStream>, Status> {
-        let pipeline = Arc::clone(&self.pipeline);
+        // Pin one pipeline generation for the entire stream (request + response).
+        let pipeline = self.pipelines.load_full();
         let mut inbound = request.into_inner();
         let (tx, rx) = mpsc::channel(RESPONSE_CHANNEL_SIZE);
 

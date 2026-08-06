@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 Shane Utt
+//! Binary entry point for the Praxis ExtProc server.
 
 #![deny(unsafe_code)]
 #![deny(unreachable_pub)]
 
-//! Binary entry point for the Praxis ExtProc server.
+use std::{process, sync::Arc};
 
-use std::process;
-
+use arc_swap::ArcSwap;
 use clap::Parser;
 use praxis_extproc::{
     config::{self, ExtProcConfig},
-    error::ExtProcError,
     server::PraxisExtProc,
     tls,
+    watcher::{self, WatcherParams},
 };
 use praxis_proto::envoy::service::ext_proc::v3::external_processor_server::ExternalProcessorServer;
+use tokio_util::sync::CancellationToken;
 use tonic::transport::Server;
 use tracing::{error, info};
 
@@ -70,9 +70,11 @@ async fn main() {
 
 /// Top-level application logic.
 async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
-    let cfg = load_config(&cli.config)?;
-    let registry = praxis_ai_filters::build_ai_registry();
+    let content = std::fs::read_to_string(&cli.config)?;
+    let cfg = config::parse_config(&content)?;
+    let registry = Arc::new(praxis_ai_filters::build_ai_registry());
     let pipeline = config::build_pipeline(&cfg, &registry)?;
+    let content_hash = watcher::hash_content(&content);
 
     if cli.validate {
         info!("configuration is valid");
@@ -80,14 +82,27 @@ async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let addrs = resolve_addresses(&cli, &cfg)?;
+    let pipelines = Arc::new(ArcSwap::from(pipeline));
 
     info!(
         grpc = %addrs.0, health = %addrs.1,
-        metrics = %addrs.2, filters = pipeline.len(),
+        metrics = %addrs.2, filters = pipelines.load().len(),
         "starting ExtProc server"
     );
 
-    Box::pin(start_services(addrs, pipeline, &cfg.server.tls)).await
+    let watcher_shutdown = CancellationToken::new();
+    let _watcher = watcher::spawn_config_watcher(WatcherParams {
+        config_path: std::path::PathBuf::from(&cli.config),
+        initial_content_hash: content_hash,
+        initial_server: cfg.server.clone(),
+        pipelines: Arc::clone(&pipelines),
+        registry: Arc::clone(&registry),
+        shutdown: watcher_shutdown.clone(),
+    });
+
+    let result = Box::pin(start_services(addrs, pipelines, &cfg.server.tls)).await;
+    watcher_shutdown.cancel();
+    result
 }
 
 /// Start gRPC, health, and metrics servers concurrently.
@@ -98,7 +113,7 @@ async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
 )]
 async fn start_services(
     addrs: (std::net::SocketAddr, std::net::SocketAddr, std::net::SocketAddr),
-    pipeline: std::sync::Arc<praxis_filter::FilterPipeline>,
+    pipelines: praxis_extproc::server::PipelineSlot,
     tls_cfg: &tls::TlsConfig,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let (shutdown_tx, _) = tokio::sync::broadcast::channel::<()>(1);
@@ -111,7 +126,7 @@ async fn start_services(
     let metrics_handle =
         tokio::spawn(async move { praxis_extproc::metrics::serve(addrs.2, wait_broadcast(metrics_rx)).await });
 
-    serve_grpc(addrs.0, pipeline, tls_cfg).await?;
+    serve_grpc(addrs.0, pipelines, tls_cfg).await?;
 
     drop(shutdown_tx);
 
@@ -129,10 +144,10 @@ async fn start_services(
 /// Start the main gRPC ExtProc server.
 async fn serve_grpc(
     addr: std::net::SocketAddr,
-    pipeline: std::sync::Arc<praxis_filter::FilterPipeline>,
+    pipelines: praxis_extproc::server::PipelineSlot,
     tls_cfg: &tls::TlsConfig,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let svc = PraxisExtProc::new(pipeline);
+    let svc = PraxisExtProc::new(pipelines);
     let tls = tls::build_tls_config(tls_cfg)?;
 
     let mut builder = Server::builder();
@@ -213,13 +228,6 @@ fn resolve_addresses(
 /// Wait for a broadcast shutdown signal.
 async fn wait_broadcast(mut rx: tokio::sync::broadcast::Receiver<()>) {
     drop(rx.recv().await);
-}
-
-/// Load and parse the YAML configuration file.
-fn load_config(path: &str) -> Result<ExtProcConfig, ExtProcError> {
-    let content = std::fs::read_to_string(path).map_err(|e| ExtProcError::Config(format!("{path}: {e}")))?;
-
-    serde_yaml::from_str(&content).map_err(|e| ExtProcError::Config(e.to_string()))
 }
 
 /// Parse a socket address from CLI override or config default.

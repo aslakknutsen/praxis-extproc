@@ -18,10 +18,12 @@ integration = []
 envoy = []
 
 [dependencies]
+arc-swap = "1.7.1"
 async-trait = "0.1.89"
 bytes = "1.11.1"
 clap = { version = "4.6.1", features = ["derive"] }
 http = "1.4.0"
+notify = "7.0.0"
 praxis-ai-apis = { git = "https://github.com/praxis-proxy/ai.git", rev = "1dc6aebe086ab5bd324234541c11ce6b1b456ae3" }
 praxis-ai-filters = { git = "https://github.com/praxis-proxy/ai.git", rev = "1dc6aebe086ab5bd324234541c11ce6b1b456ae3" }
 praxis-core = { version = "=0.5.1", package = "praxis-proxy-core" }
@@ -38,9 +40,10 @@ rustls = "0.23.40"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_yaml = { package = "yaml_serde", version = "0.10.4" }
 thiserror = "2.0.18"
-tokio = { version = "1.52.2", features = ["macros", "rt-multi-thread", "signal"] }
+tokio = { version = "1.52.2", features = ["macros", "rt-multi-thread", "signal", "sync", "time"] }
 tokio-rustls = "0.26.4"
 tokio-stream = "0.1.17"
+tokio-util = { version = "0.7.16", default-features = false, features = ["rt"] }
 tonic = { version = "0.14.6", features = ["tls-ring", "transport"] }
 tonic-health = "0.14.6"
 tracing = "0.1.44"
@@ -49,6 +52,7 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
 [dev-dependencies]
 envoy-harness = { path = "tests/envoy_harness" }
 reqwest = { version = "0.12.28", default-features = false, features = ["rustls-tls"] }
+tempfile = "3.27.0"
 tokio = { version = "1.52.2", features = ["macros", "rt-multi-thread", "test-util"] }
 
 [lints.rust]

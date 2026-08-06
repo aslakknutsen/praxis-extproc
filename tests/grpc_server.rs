@@ -665,7 +665,7 @@ async fn start_server(config_yaml: &str) -> (ExtProcClient, tokio::sync::oneshot
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
     let addr = listener.local_addr().expect("local addr");
 
-    let svc = PraxisExtProc::new(pipeline);
+    let svc = PraxisExtProc::from_pipeline(pipeline);
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
 
     tokio::spawn(async move {

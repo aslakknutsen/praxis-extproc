@@ -22,7 +22,7 @@ use tracing::info;
 /// let mode = TlsMode::default();
 /// assert!(matches!(mode, TlsMode::None));
 /// ```
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TlsMode {
     /// Generate an ephemeral self-signed certificate at startup.
@@ -48,7 +48,7 @@ pub enum TlsMode {
 /// let cfg = TlsConfig::default();
 /// assert!(matches!(cfg.mode, praxis_extproc::tls::TlsMode::None));
 /// ```
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct TlsConfig {
     /// Which TLS mode to use.

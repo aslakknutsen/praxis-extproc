@@ -192,19 +192,19 @@ make ensure-envoy   # download binary to .tools/
 make test-envoy     # PR-gate smoke (headers + backend capture)
 ```
 
-Hot-reload acceptance (`config_file_change_hot_reloads`)
-asserts that rewriting the Praxis config file updates
-response headers without restart. It is `#[ignore]` until
-[issue #17](https://github.com/opendatahub-io/praxis-extproc/issues/17)
-and is expected to **fail** when run with other ignored Envoy e2e
-tests:
+Hot-reload of `filter_chains` is implemented in-process
+(config file watch + `ArcSwap`, last-known-good on failure).
+Unit and gRPC tests cover successful reload, LKG retention,
+and per-stream pipeline pinning.
+
+The Envoy e2e acceptance test
+(`config_file_change_hot_reloads`) remains `#[ignore]` until
+the harness shares the binary's file-watch startup path; it is
+expected to **fail** when run via:
 
 ```console
 make test-envoy-failing
 ```
-
-When #17 lands, remove `#[ignore]` from that test; no
-assertion change is required.
 
 ## Container Build
 

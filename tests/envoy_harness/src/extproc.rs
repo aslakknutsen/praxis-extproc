@@ -60,7 +60,7 @@ pub async fn start_extproc(praxis_yaml: &str) -> ExtProcHandle {
         .await
         .unwrap_or_else(|e| panic!("bind extproc on {port}: {e}"));
 
-    let svc = PraxisExtProc::new(pipeline);
+    let svc = PraxisExtProc::from_pipeline(pipeline);
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
 
     tokio::spawn(async move {

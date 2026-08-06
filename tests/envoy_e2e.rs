@@ -83,7 +83,7 @@ async fn envoy_extproc_applies_headers() {
 }
 
 #[tokio::test]
-#[ignore = "opendatahub-io/praxis-extproc#17: filter-chain hot-reload not implemented"]
+#[ignore = "opendatahub-io/praxis-extproc#17: Envoy e2e file-watch deferred until harness shares binary watch path"]
 async fn config_file_change_hot_reloads() {
     let env = EnvoyEnvBuilder::new(CONFIG_GEN_A).start().await;
 
