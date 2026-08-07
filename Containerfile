@@ -61,6 +61,7 @@ RUN rustup show \
 
 COPY . .
 
+
 RUN set -eu; \
     TARGET=$(cat /tmp/rust_target); \
     LINKER=$(cat /tmp/linker); \
