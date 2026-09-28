@@ -258,6 +258,8 @@ fips-signature-store:
 fips-verify-image: | require-podman
 	$(XTASK) fips verify-image --pinned-in Containerfile $(FIPS_UBI9_IMAGE)
 	$(XTASK) fips verify-image --pinned-in Containerfile $(FIPS_UBI9_MINIMAL_IMAGE)
+	$(XTASK) fips verify-image --pinned-in Dockerfile.konflux $(FIPS_UBI9_IMAGE)
+	$(XTASK) fips verify-image --pinned-in Dockerfile.konflux $(FIPS_UBI9_MINIMAL_IMAGE)
 
 # The binary starts on ubi-minimal, installs the OpenSSL provider, logs the
 # FIPS signals and accepts the example config; a cheap proof that the image
