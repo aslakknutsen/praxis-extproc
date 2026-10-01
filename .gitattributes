@@ -7,4 +7,3 @@
 Makefile linguist-detectable=false
 Containerfile linguist-detectable=false
 Dockerfile linguist-detectable=false
-Dockerfile.konflux linguist-detectable=false
