@@ -59,8 +59,10 @@ stage; compliance reports still use `make fips-check`, which builds
 
 When you change digest pins, `CARGO_FEATURES`, the cargo-auditable SBOM recipe,
 or runtime layout, update **both** files and the Makefile digest variables.
-`make fips-verify-image` checks that both files default-pin the same UBI 9
-bases. To build the Konflux file locally:
+`make fips-verify-image` checks that `Containerfile` and `Dockerfile.konflux`
+default-pin the same `ubi9/ubi` builder digest (the Konflux runtime uses
+`ubi-minimal-pqc` on `registry.redhat.io`, verified separately when you bump
+that pin). To build the Konflux file locally:
 
 ```console
 podman build -f Dockerfile.konflux .
