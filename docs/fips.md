@@ -24,8 +24,8 @@ goes into it. How the build is checked and how the tooling works is in
 
 The `Containerfile` builds the FIPS feature set by default, on
 `ubi9/ubi` with Red Hat's `rust-toolset` and OpenSSL, and ships on
-`ubi9/ubi-minimal`; both bases are pinned by digest and their Red Hat
-signatures are verified before every podman build here. ODH Konflux builds
+`ubi9/ubi-minimal`; both bases are pinned by digest in the `Containerfile`
+and Makefile. ODH Konflux builds
 `Containerfile`; downstream mirrors `Dockerfile.konflux` (see below). There
 is no separate FIPS tag: the image is the FIPS build.
 

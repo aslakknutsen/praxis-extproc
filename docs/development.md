@@ -8,9 +8,9 @@ Praxis ExtProc.
 - Rust stable 1.96+ (edition 2024)
 - Rust nightly (for `rustfmt`; `group_imports` and
   `imports_granularity` are nightly-only)
-- Docker or Podman (container builds; the FIPS checks,
-  the base image signature verification and Red Hat's
-  scanner need Podman on Linux)
+- Docker or Podman (container builds; FIPS image build,
+  smoke, and scan targets, including Red Hat's
+  check-payload scanner, need Podman on Linux)
 - Go 1.26+ and the OpenShift CLI `oc` (`make fips-scanner`,
   `make fips-scan`; optional)
 - [KIND] (local Kubernetes testing)
@@ -199,8 +199,8 @@ binary links UBI9 `libcrypto.so.3`) and
 `ubi9/ubi-minimal` at runtime, which already ships
 `openssl-libs` and the FIPS provider module; nothing
 is installed into it. Both bases are pinned by digest
-and, with podman, their Red Hat signatures are
-verified before every build. The release build embeds
+via Makefile `FIPS_UBI9_DIGEST` / `FIPS_UBI9_MINIMAL_DIGEST`
+build-args. The release build embeds
 the list of compiled crates with cargo-auditable, from
 cargo's SBOM precursor, which Red Hat's scanner reads.
 Cargo is invoked with `--ignore-rust-version` because
